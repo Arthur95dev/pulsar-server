@@ -2,6 +2,7 @@ import type {
   JwtPayload,
   JwtToken,
   Nonce,
+  NonceEntry,
   VerifyWalletParams,
   WalletAddress,
 } from './auth.types.ts';
@@ -14,23 +15,38 @@ const JWT_SECRET =
     throw new Error('JWT_SECRET is not configured');
   })();
 
+const NONCE_TTL_MS = 5 * 60 * 1000;
+
+
 export class AuthService {
-  #nonces = new Map<WalletAddress, Nonce>();
+  #nonces = new Map<WalletAddress, NonceEntry>();
 
   createNonce(address: WalletAddress): Nonce {
     const nonce = crypto.randomUUID();
-    this.#nonces.set(this.#normalize(address), nonce);
+    this.#nonces.set(this.#normalize(address), {
+      nonce,
+      expiresAt: Date.now() + NONCE_TTL_MS,
+    });
+
     return nonce;
   }
 
   verifyWallet({ address, signature }: VerifyWalletParams): JwtToken {
     const key = this.#normalize(address);
-    const nonce = this.#nonces.get(key);
+    const entry = this.#nonces.get(key);
 
-    if (!nonce) {
+    if (!entry) {
       throw new Error('Nonce not found');
     }
 
+    const now = Date.now();
+
+    if (entry.expiresAt < now) {
+      this.#nonces.delete(key);
+      throw new Error('Nonce expired');
+    }
+
+    const nonce = entry.nonce;
     const message = `Pulsar Login\n\nNonce: ${nonce}`;
 
     const recovered = verifyMessage(message, signature);
