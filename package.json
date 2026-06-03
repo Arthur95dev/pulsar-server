@@ -7,9 +7,14 @@
     "dev": "bun run src/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0",
+    "jsonwebtoken": "^9.0.3"
   }
 }
